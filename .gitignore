@@ -5,4 +5,5 @@
 *.cmx
 *.o
 *.opt
+*.run
 aquas
