@@ -1,0 +1,29 @@
+########################################################################
+# OCaml configuration.
+# Delete this section if you are not building OCaml files.
+#
+
+PROGRAM = aquas
+
+USE_OCAMLFIND = true
+OCAMLPACKS[] =
+	extlib
+
+if $(not $(OCAMLFIND_EXISTS))
+	eprintln(This project requires ocamlfind, but is was not found.)
+	eprintln(You need to install ocamlfind and run "omake --configure".)
+	exit 1
+
+################################################
+# Build an OCaml program
+
+FILES[] =
+	aquas
+
+.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
+
+.PHONY: clean
+clean:
+	rm -f \
+		$(filter-proper-targets $(glob $(addsuffix .*, $(FILES)))) \
+		$(PROGRAM).run $(PROGRAM).opt $(PROGRAM)
