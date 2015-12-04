@@ -9,6 +9,16 @@ let bytes_of_int i =
   let c3 = Char.chr (i land 0xff) in
   List.fold_left (fun acc c -> acc ^ (String.make 1 c)) "" [c0;c1;c2;c3]
 
+(* Eliminate comments *)
+let eliminate_comments lines =
+  List.map (fun l -> 
+    if String.contains l '#' then
+      let p = String.index l '#' - 1 in
+      String.sub l 0 p
+    else
+      l)
+  lines
+
 (* Split input assembly lines to .text/.data section *)
 type section = Text | Data
 let split_input lines =
@@ -50,6 +60,9 @@ let emit oc lines =
   (* Ignore .extern pseudo-instruction *)
   let lines =
     List.filter (fun l -> not (ExtString.String.exists l ".extern")) lines in
+
+  (* Ignore comments *)
+  let lines = eliminate_comments lines in
 
   (* Split lines to .text/.data section *)
   let text_lines, data_lines = split_input lines in
