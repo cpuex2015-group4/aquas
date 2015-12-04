@@ -1,3 +1,9 @@
+(* constants *)
+let p_extern = ".extern"
+let p_text   = ".text"
+let p_data   = ".data"
+let p_word   = ".word"
+
 (* add prefix to label *)
 let label l = "_leml_" ^ l
 
@@ -31,8 +37,8 @@ let split_input lines =
         (let l = ExtString.String.strip l in
          match l with
          | "" -> split_input' sec textls datals ls
-         | ".text" -> split_input' Text textls datals ls
-         | ".data" -> split_input' Data textls datals ls
+         | l when l = p_text -> split_input' Text textls datals ls
+         | l when l = p_data -> split_input' Data textls datals ls
          | _ when sec = Text -> split_input' sec (l::textls) datals ls
          | _ when sec = Data -> split_input' sec textls (l::datals) ls
          | _ -> assert false) in
@@ -55,11 +61,29 @@ let rec emit_text oc lines addr_map =
       (Printf.fprintf oc "line";
        emit_text oc lines addr_map)
 
+(* .data section emitter *)
+let rec emit_data oc = function
+  | [] -> ()
+  | l::lines ->
+      (let l = ExtString.String.strip l in
+       let len = String.length p_word in 
+
+       (* .data lines should start with `.word` *)
+       assert ((String.sub l 0 len) = p_word);
+
+       (* fetch word data *)
+       let s = ExtString.String.strip (String.sub l len (String.length l - len - 1)) in
+       let i = int_of_string (ExtString.String.strip s) in
+
+       (* emit data *)
+       Printf.fprintf oc "%s" (bytes_of_int i);
+       emit_data oc lines)
+
 (* Executable code emitter *)
 let emit oc lines =
   (* Ignore .extern pseudo-instruction *)
   let lines =
-    List.filter (fun l -> not (ExtString.String.exists l ".extern")) lines in
+    List.filter (fun l -> not (ExtString.String.exists l p_extern)) lines in
 
   (* Ignore comments *)
   let lines = eliminate_comments lines in
@@ -82,6 +106,4 @@ let emit oc lines =
   emit_text oc text_lines [] (* addr_map *);
 
   (* Emit .data section *)
-  (* TODO: impelement
   emit_data oc data_lines;
-  *)
