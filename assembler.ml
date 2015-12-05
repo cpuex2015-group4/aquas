@@ -97,8 +97,7 @@ let rec emit_text oc lines addr_map =
   match lines with
   | [] -> ()
   | l::lines ->
-      (* dummy *)
-      (Printf.fprintf oc "line";
+      (Printf.fprintf oc "%s" (Inst.bytecode l addr_map);
        emit_text oc lines addr_map)
 
 (* .data section emitter *)

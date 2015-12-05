@@ -20,6 +20,7 @@ if $(not $(OCAMLFIND_EXISTS))
 FILES[] =
 	main
 	assembler
+	inst
 
 OCAML_OTHER_LIBS += str
 
