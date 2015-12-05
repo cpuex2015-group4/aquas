@@ -1,6 +1,3 @@
-(* AddrMap :: String -> Int (Address) *)
-module AddrMap = Map.Make(String)
-
 (* constants *)
 let text_offset = 0x00400
 let data_offset = 0x10000
@@ -63,7 +60,8 @@ let build_addr_map text_lines data_lines =
           build
             (* add new relation between label and address *)
             (AddrMap.add (String.sub l 0 (String.length l -1)) (n + offset) map)
-            offset (n + 1)
+            (* do not count label line *)
+            offset n (* + 1 *)
             (* strip label line *)
             (* l :: *) striped_lines
             lines
