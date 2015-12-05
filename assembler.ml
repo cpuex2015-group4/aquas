@@ -24,7 +24,7 @@ let bytes_of_int i =
 let eliminate_comments lines =
   List.map (fun l -> 
     if String.contains l '#' then
-      let p = String.index l '#' - 1 in
+      let p = String.index l '#' in
       String.sub l 0 p
     else
       l)
