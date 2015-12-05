@@ -1,6 +1,8 @@
 module AddrMap = Map.Make(String)
 
 (* constants *)
+let text_offset = 0x00400
+let data_offset = 0x10000
 let p_extern = ".extern"
 let p_text   = ".text"
 let p_data   = ".data"
@@ -56,8 +58,6 @@ let emit_header oc text_size data_size entry_point =
 
 (* Build (Label -> Address) map *)
 let build_addr_map text_lines data_lines =
-  let text_offset = 0x00400 in
-  let data_offset = 0x10000 in
   let pattern_label = Str.regexp "[A-za-z_][A-za-z0-9_\\.]*:" in
 
   (* general mapping-building function *)
