@@ -112,6 +112,30 @@ let i_format ?(d=0) ?(s=0) ?(imm=0) op =
     (s lsl 16) +
     imm)
 
+let addi rf (opt:processing) d s imm =
+  let bitim = 0 in
+  let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
+  match rf with
+  | GPR -> i_format ~d:(gpr d) ~s:(gpr s) ~imm:imm (optbit + bitim)
+  | FPR -> i_format ~d:(fpr d) ~s:(fpr s) ~imm:imm (0b10000 + optbit + bitim)
+
+let subi rf (opt:processing) d s imm =
+  let bitim = 1 in
+  let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
+  match rf with
+  | GPR -> i_format ~d:(gpr d) ~s:(gpr s) ~imm:imm (optbit + bitim)
+  | FPR -> i_format ~d:(fpr d) ~s:(fpr s) ~imm:imm (0b10000 + optbit + bitim)
+
+let muli (opt:processing) d s imm =
+  let bitim = 2 in
+  let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
+  i_format ~d:(fpr d) ~s:(fpr s) ~imm:imm (0b10000 + optbit + bitim)
+
+let divi (opt:processing) d s imm =
+  let bitim = 3 in
+  let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
+  i_format ~d:(fpr d) ~s:(fpr s) ~imm:imm (0b10000 + optbit + bitim)
+
 let jspec = function None -> 0 | Link -> 1
 let j (jopt:jumpspec) d = i_format ~d:(gpr d) (((jspec jopt) lsl 2) + 2)
 let jr (jopt:jumpspec) d = i_format ~d:(gpr d) (((jspec jopt) lsl 2) + 3)
@@ -178,17 +202,35 @@ let bytecode line addrmap =
     | "divn.s" -> div Neg args.(0) args.(1) args.(2)
     | "diva.s" -> div Abs args.(0) args.(1) args.(2)
     (* I-Format *)
-    | "j"      -> j None args.(0)
-    | "jal"    -> j Link args.(0)
-    | "jr"     -> jr None args.(0)
-    | "jral"   -> jr Link args.(0)
-    | "ld"     -> ld GPR args.(0) args.(1) (imm args.(2))
-    | "ld.s"   -> ld FPR args.(0) args.(1) (imm args.(2))
-    | "st"     -> st GPR args.(0) args.(1) (imm args.(2))
-    | "st.s"   -> st FPR args.(0) args.(1) (imm args.(2))
-    | "sll"    -> sll args.(0) args.(1) (imm args.(2))
-    | "srl"    -> sll args.(0) args.(1) (imm args.(2))
-    | "inv.s"  -> inv args.(0) args.(1)
-    | "sqrt.s" -> inv args.(0) args.(1)
+    | "addi"    -> addi GPR None args.(0) args.(1) (imm args.(2))
+    | "addi.s"  -> addi FPR None args.(0) args.(1) (imm args.(2))
+    | "addin"   -> addi GPR Neg args.(0) args.(1)  (imm args.(2))
+    | "addin.s" -> addi FPR Neg args.(0) args.(1)  (imm args.(2))
+    | "addia"   -> addi GPR Abs args.(0) args.(1)  (imm args.(2))
+    | "addia.s" -> addi FPR Abs args.(0) args.(1)  (imm args.(2))
+    | "subi"    -> subi GPR None args.(0) args.(1) (imm args.(2))
+    | "subi.s"  -> subi FPR None args.(0) args.(1) (imm args.(2))
+    | "subin"   -> subi GPR Neg args.(0) args.(1)  (imm args.(2))
+    | "subin.s" -> subi FPR Neg args.(0) args.(1)  (imm args.(2))
+    | "subia"   -> subi GPR Abs args.(0) args.(1)  (imm args.(2))
+    | "subia.s" -> subi FPR Abs args.(0) args.(1)  (imm args.(2))
+    | "muli.s"  -> muli None args.(0) args.(1) (imm args.(2))
+    | "mulin.s" -> muli Neg args.(0) args.(1)  (imm args.(2))
+    | "mulia.s" -> muli Abs args.(0) args.(1)  (imm args.(2))
+    | "divi.s"  -> divi None args.(0) args.(1) (imm args.(2))
+    | "divin.s" -> divi Neg args.(0) args.(1)  (imm args.(2))
+    | "divia.s" -> divi Abs args.(0) args.(1)  (imm args.(2))
+    | "j"       -> j None args.(0)
+    | "jal"     -> j Link args.(0)
+    | "jr"      -> jr None args.(0)
+    | "jral"    -> jr Link args.(0)
+    | "ld"      -> ld GPR args.(0) args.(1) (imm args.(2))
+    | "ld.s"    -> ld FPR args.(0) args.(1) (imm args.(2))
+    | "st"      -> st GPR args.(0) args.(1) (imm args.(2))
+    | "st.s"    -> st FPR args.(0) args.(1) (imm args.(2))
+    | "sll"     -> sll args.(0) args.(1) (imm args.(2))
+    | "srl"     -> sll args.(0) args.(1) (imm args.(2))
+    | "inv.s"   -> inv args.(0) args.(1)
+    | "sqrt.s"  -> inv args.(0) args.(1)
     | _ -> failwith (Printf.sprintf "invalid mnemonic `%s`" op)
   end
