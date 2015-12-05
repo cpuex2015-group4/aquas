@@ -21,6 +21,8 @@ FILES[] =
 	main
 	assembler
 
+OCAML_OTHER_LIBS += str
+
 .DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
 
 .PHONY: clean

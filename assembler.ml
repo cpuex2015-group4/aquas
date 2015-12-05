@@ -1,3 +1,5 @@
+module AddrMap = Map.Make(String)
+
 (* constants *)
 let p_extern = ".extern"
 let p_text   = ".text"
@@ -52,6 +54,43 @@ let emit_header oc text_size data_size entry_point =
   Printf.fprintf oc "%s" (bytes_of_int data_size);
   Printf.fprintf oc "%s" (bytes_of_int entry_point)
 
+(* Build (Label -> Address) map *)
+let build_addr_map text_lines data_lines =
+  let text_offset = 0x00400 in
+  let data_offset = 0x10000 in
+  let pattern_label = Str.regexp "[A-za-z_][A-za-z0-9_\\.]*:" in
+
+  (* general mapping-building function *)
+  let rec build map offset n striped_lines = function
+    | [] -> (map, List.rev striped_lines)
+    | l::lines ->
+        let l = ExtString.String.strip l in
+        if Str.string_match pattern_label l 0 then
+          (* if input line is label *)
+          build
+            (* add new relation between label and address *)
+            (AddrMap.add (String.sub l 0 (String.length l -1)) (n + offset) map)
+            offset (n + 1)
+            (* strip label line *)
+            (* l :: *) striped_lines
+            lines
+        else
+          build map offset (n + 1) (l :: striped_lines) lines in
+
+  (* build map for .text/.data respectively *)
+  let text_map, text_lines = build AddrMap.empty text_offset 0 [] text_lines in
+  let data_map, data_lines = build AddrMap.empty data_offset 0 [] data_lines in
+
+  (* merge .text/.data address map *)
+  let merge_spec = fun l text_addr data_addr ->
+    match text_addr, data_addr with
+    | Some addr, None -> Some addr
+    | None, Some addr -> Some addr
+    | Some addr1, Some addr2 -> failwith "cannot define same label"
+    | None, None -> assert false in
+  let map = AddrMap.merge merge_spec text_map data_map in
+  (map, text_lines, data_lines)
+
 (* .text section emitter *)
 let rec emit_text oc lines addr_map =
   match lines with
@@ -90,20 +129,21 @@ let emit oc lines =
 
   (* Split lines to .text/.data section *)
   let text_lines, data_lines = split_input lines in
+  (* here empty lines are striped *)
 
   (* Build mapping between label name and address *)
-  (* TODO: implement
-  let addr_map = build_addr_map text_lines data_lines in
-  *)
+  let addr_map, text_lines, data_lines =
+    build_addr_map text_lines data_lines in
+  (* here text_lines and data_lines are striped labels off *)
 
   (* Emit Aquila header *)
   let text_size = List.length text_lines in
   let data_size = List.length data_lines in
-  let entry_point = 0 (* AddrMap.find (label "entry") addr_map *) in
+  let entry_point = AddrMap.find (label "entry") addr_map in
   emit_header oc text_size data_size entry_point;
 
   (* Emit .text section *)
-  emit_text oc text_lines [] (* addr_map *);
+  emit_text oc text_lines addr_map;
 
   (* Emit .data section *)
   emit_data oc data_lines;
