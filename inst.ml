@@ -72,7 +72,8 @@ let r_format d ?(s=0) ?(t=0) op =
     (op lsl 26) +
     (d lsl 21) +
     (s lsl 16) +
-    (t lsl 11))
+    (t lsl 11) +
+    1)
 
 let add rf (opt:processing) d s t =
   let bitim = 0 in
