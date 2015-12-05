@@ -1,5 +1,6 @@
-type regtype = GPR | FPR
-type compop = None | Neg | Abs
+type regtype    = GPR | FPR
+type processing = None | Neg | Abs
+type jumpspec   = None | Link
 
 (* operand -> number *)
 let gpr x =
@@ -11,6 +12,11 @@ let fpr x =
   let prefix = String.sub x 0 2 in
   assert (prefix = "%f");
   int_of_string (String.sub x 2 (String.length x - 2))
+
+let imm x =
+  let prefix = String.sub x 0 1 in
+  assert (prefix = "$");
+  int_of_string (String.sub x 1 (String.length x - 1))
 
 (* X-Format *)
 let x_format ?(d=0) ?(s=0) ?(t=0) funct =
@@ -57,7 +63,7 @@ let ble rf d s imm =
   | FPR -> b_format 0b11110 (fpr d) (fpr s) imm
 
 (* R-Format *)
-let r_format d s ?(t=0) op =
+let r_format d ?(s=0) ?(t=0) op =
   assert (0 <= op && op <= 0b11111);
   assert (0 <= d && d <= 0b11111);
   assert (0 <= s && s <= 0b11111);
@@ -68,29 +74,66 @@ let r_format d s ?(t=0) op =
     (s lsl 16) +
     (t lsl 11))
 
-let add rf opt d s t =
+let add rf (opt:processing) d s t =
   let bitim = 0 in
   let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
   match rf with
-  | GPR -> r_format (gpr d) (gpr s) ~t:(gpr t) (optbit + bitim)
-  | FPR -> r_format (fpr d) (fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
+  | GPR -> r_format (gpr d) ~s:(gpr s) ~t:(gpr t) (optbit + bitim)
+  | FPR -> r_format (fpr d) ~s:(fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
 
-let sub rf opt d s t =
+let sub rf (opt:processing) d s t =
   let bitim = 1 in
   let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
   match rf with
-  | GPR -> r_format (gpr d) (gpr s) ~t:(gpr t) (optbit + bitim)
-  | FPR -> r_format (fpr d) (fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
+  | GPR -> r_format (gpr d) ~s:(gpr s) ~t:(gpr t) (optbit + bitim)
+  | FPR -> r_format (fpr d) ~s:(fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
 
-let mul opt d s t =
+let mul (opt:processing) d s t =
   let bitim = 2 in
   let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
-  r_format (fpr d) (fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
+  r_format (fpr d) ~s:(fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
 
-let div opt d s t =
+let div (opt:processing) d s t =
   let bitim = 3 in
   let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
-  r_format (fpr d) (fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
+  r_format (fpr d) ~s:(fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
+
+(* I-Format *)
+let i_format ?(d=0) ?(s=0) ?(imm=0) op =
+  assert (0 <= op && op <= 0b11111);
+  assert (0 <= d && d <= 0b11111);
+  assert (0 <= s && s <= 0b11111);
+  assert (-0b1000000000000000 <= imm && imm <= 0b0111111111111111);
+  Utils.bytes_of_int (
+    (1 lsl 31) +
+    (op lsl 26) +
+    (d lsl 21) +
+    (s lsl 16) +
+    imm)
+
+let jspec = function None -> 0 | Link -> 1
+let j (jopt:jumpspec) d = i_format ~d:(gpr d) (((jspec jopt) lsl 2) + 2)
+let jr (jopt:jumpspec) d = i_format ~d:(gpr d) (((jspec jopt) lsl 2) + 3)
+
+let ld rf d s imm =
+  match rf with
+  | GPR -> i_format ~d:(gpr d) ~s:(gpr s) ~imm:imm 0b01100
+  | FPR -> i_format ~d:(fpr d) ~s:(gpr s) ~imm:imm 0b11100
+
+let st rf d s imm =
+  match rf with
+  | GPR -> i_format ~d:(gpr d) ~s:(gpr s) ~imm:imm 0b01101
+  | FPR -> i_format ~d:(fpr d) ~s:(gpr s) ~imm:imm 0b11101
+
+let sll d s imm =
+  if not ((imm land 0b11111) <> 0) then failwith "shamt must be under 31";
+  i_format ~d:(gpr d) ~s:(gpr s) ~imm:imm 0b01110
+let srl d s imm =
+  if not ((imm land 0b11111) <> 0) then failwith "shamt must be under 31";
+  i_format ~d:(gpr d) ~s:(gpr s) ~imm:imm 0b01111
+
+let inv d s = i_format ~d:(fpr d) ~s:(fpr s) 0b11110
+let sqrt d s = i_format ~d:(fpr d) ~s:(fpr s) 0b11111
 
 (* Assembly -> Bytecode *)
 let bytecode line addrmap =
@@ -133,5 +176,18 @@ let bytecode line addrmap =
     | "div.s"  -> div None args.(0) args.(1) args.(2)
     | "divn.s" -> div Neg args.(0) args.(1) args.(2)
     | "diva.s" -> div Abs args.(0) args.(1) args.(2)
+    (* I-Format *)
+    | "j"      -> j None args.(0)
+    | "jal"    -> j Link args.(0)
+    | "jr"     -> jr None args.(0)
+    | "jral"   -> jr Link args.(0)
+    | "ld"     -> ld GPR args.(0) args.(1) (imm args.(2))
+    | "ld.s"   -> ld FPR args.(0) args.(1) (imm args.(2))
+    | "st"     -> st GPR args.(0) args.(1) (imm args.(2))
+    | "st.s"   -> st FPR args.(0) args.(1) (imm args.(2))
+    | "sll"    -> sll args.(0) args.(1) (imm args.(2))
+    | "srl"    -> sll args.(0) args.(1) (imm args.(2))
+    | "inv.s"  -> inv args.(0) args.(1)
+    | "sqrt.s" -> inv args.(0) args.(1)
     | _ -> failwith (Printf.sprintf "invalid mnemonic `%s`" op)
   end
