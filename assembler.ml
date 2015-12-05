@@ -28,7 +28,7 @@ let split_input lines =
 
     (* Check current section then add line to either section *)
     | l::ls ->
-        (let l = ExtString.String.strip l in
+        (let l = String.trim l in
          match l with
          | "" -> split_input' sec textls datals ls
          | l when l = p_text -> split_input' Text textls datals ls
@@ -54,7 +54,7 @@ let build_addr_map text_lines data_lines =
   let rec build map offset n striped_lines = function
     | [] -> (map, List.rev striped_lines)
     | l::lines ->
-        let l = ExtString.String.strip l in
+        let l = String.trim l in
         if Str.string_match pattern_label l 0 then
           (* if input line is label *)
           build
@@ -94,15 +94,15 @@ let rec emit_text oc lines addr_map =
 let rec emit_data oc = function
   | [] -> ()
   | l::lines ->
-      (let l = ExtString.String.strip l in
+      (let l = String.trim l in
        let len = String.length p_word in 
 
        (* .data lines should start with `.word` *)
        assert ((String.sub l 0 len) = p_word);
 
        (* fetch word data *)
-       let s = ExtString.String.strip (String.sub l len (String.length l - len - 1)) in
-       let i = int_of_string (ExtString.String.strip s) in
+       let s = String.trim (String.sub l len (String.length l - len - 1)) in
+       let i = int_of_string (String.trim s) in
 
        (* emit data *)
        Printf.fprintf oc "%s" (Utils.bytes_of_int i);

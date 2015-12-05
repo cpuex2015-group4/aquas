@@ -57,7 +57,7 @@ let ble rf d s imm =
 
 (* Assembly -> Bytecode *)
 let bytecode line addrmap =
-  let line = ExtString.String.strip line in
+  let line = String.trim line in
   match Str.split (Str.regexp "[ \t,]+") line with
   | [] -> assert false
   | op :: args -> begin
