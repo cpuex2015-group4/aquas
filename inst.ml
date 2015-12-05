@@ -1,4 +1,5 @@
 type regtype = GPR | FPR
+type compop = None | Neg | Abs
 
 (* operand -> number *)
 let gpr x =
@@ -55,6 +56,42 @@ let ble rf d s imm =
   | GPR -> b_format 0b01110 (gpr d) (gpr s) imm
   | FPR -> b_format 0b11110 (fpr d) (fpr s) imm
 
+(* R-Format *)
+let r_format d s ?(t=0) op =
+  assert (0 <= op && op <= 0b11111);
+  assert (0 <= d && d <= 0b11111);
+  assert (0 <= s && s <= 0b11111);
+  assert (0 <= t && t <= 0b11111);
+  Utils.bytes_of_int (
+    (op lsl 26) +
+    (d lsl 21) +
+    (s lsl 16) +
+    (t lsl 11))
+
+let add rf opt d s t =
+  let bitim = 0 in
+  let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
+  match rf with
+  | GPR -> r_format (gpr d) (gpr s) ~t:(gpr t) (optbit + bitim)
+  | FPR -> r_format (fpr d) (fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
+
+let sub rf opt d s t =
+  let bitim = 1 in
+  let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
+  match rf with
+  | GPR -> r_format (gpr d) (gpr s) ~t:(gpr t) (optbit + bitim)
+  | FPR -> r_format (fpr d) (fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
+
+let mul opt d s t =
+  let bitim = 2 in
+  let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
+  r_format (fpr d) (fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
+
+let div opt d s t =
+  let bitim = 3 in
+  let optbit = match opt with None -> 0 | Neg -> 0b0100 | Abs -> 0b1000 in
+  r_format (fpr d) (fpr s) ~t:(fpr t) (0b10000 + optbit + bitim)
+
 (* Assembly -> Bytecode *)
 let bytecode line addrmap =
   let line = String.trim line in
@@ -77,5 +114,24 @@ let bytecode line addrmap =
     | "blt.s" -> blt FPR args.(0) args.(1) (AddrMap.find args.(2) addrmap)
     | "ble"   -> ble GPR args.(0) args.(1) (AddrMap.find args.(2) addrmap)
     | "ble.s" -> ble FPR args.(0) args.(1) (AddrMap.find args.(2) addrmap)
+    (* R-Format *)
+    | "add"    -> add GPR None args.(0) args.(1) args.(2)
+    | "add.s"  -> add FPR None args.(0) args.(1) args.(2)
+    | "addn"   -> add GPR Neg args.(0) args.(1) args.(2)
+    | "addn.s" -> add FPR Neg args.(0) args.(1) args.(2)
+    | "adda"   -> add GPR Abs args.(0) args.(1) args.(2)
+    | "adda.s" -> add FPR Abs args.(0) args.(1) args.(2)
+    | "sub"    -> sub GPR None args.(0) args.(1) args.(2)
+    | "sub.s"  -> sub FPR None args.(0) args.(1) args.(2)
+    | "subn"   -> sub GPR Neg args.(0) args.(1) args.(2)
+    | "subn.s" -> sub FPR Neg args.(0) args.(1) args.(2)
+    | "suba"   -> sub GPR Abs args.(0) args.(1) args.(2)
+    | "suba.s" -> sub FPR Abs args.(0) args.(1) args.(2)
+    | "mul.s"  -> mul None args.(0) args.(1) args.(2)
+    | "muln.s" -> mul Neg args.(0) args.(1) args.(2)
+    | "mula.s" -> mul Abs args.(0) args.(1) args.(2)
+    | "div.s"  -> div None args.(0) args.(1) args.(2)
+    | "divn.s" -> div Neg args.(0) args.(1) args.(2)
+    | "diva.s" -> div Abs args.(0) args.(1) args.(2)
     | _ -> failwith (Printf.sprintf "invalid mnemonic `%s`" op)
   end
