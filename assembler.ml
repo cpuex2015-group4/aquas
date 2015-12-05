@@ -12,14 +12,6 @@ let p_word   = ".word"
 (* add prefix to label *)
 let label l = "_leml_" ^ l
 
-(* Convert integer to big-endian formatted bytecode *)
-let bytes_of_int i =
-  let c0 = Char.chr ((i lsr 24) land 0xff) in
-  let c1 = Char.chr ((i lsr 16) land 0xff) in
-  let c2 = Char.chr ((i lsr 8) land 0xff) in
-  let c3 = Char.chr (i land 0xff) in
-  List.fold_left (fun acc c -> acc ^ (String.make 1 c)) "" [c0;c1;c2;c3]
-
 (* Eliminate comments *)
 let eliminate_comments lines =
   List.map (fun l -> 
@@ -53,9 +45,9 @@ let split_input lines =
 (* Emit header *)
 let emit_header oc text_size data_size entry_point =
   Printf.fprintf oc "AQIL";
-  Printf.fprintf oc "%s" (bytes_of_int text_size);
-  Printf.fprintf oc "%s" (bytes_of_int data_size);
-  Printf.fprintf oc "%s" (bytes_of_int entry_point)
+  Printf.fprintf oc "%s" (Utils.bytes_of_int text_size);
+  Printf.fprintf oc "%s" (Utils.bytes_of_int data_size);
+  Printf.fprintf oc "%s" (Utils.bytes_of_int entry_point)
 
 (* Build (Label -> Address) map *)
 let build_addr_map text_lines data_lines =
@@ -115,7 +107,7 @@ let rec emit_data oc = function
        let i = int_of_string (ExtString.String.strip s) in
 
        (* emit data *)
-       Printf.fprintf oc "%s" (bytes_of_int i);
+       Printf.fprintf oc "%s" (Utils.bytes_of_int i);
        emit_data oc lines)
 
 (* Executable code emitter *)

@@ -21,6 +21,7 @@ FILES[] =
 	main
 	assembler
 	inst
+	utils
 
 OCAML_OTHER_LIBS += str
 
