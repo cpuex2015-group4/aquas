@@ -12,7 +12,7 @@ l1:
 	beq.s  %f1, %f31, l1
 	add   %r3, %r5, %r5
 	muln.s %f4, %f4, %f30 
-	j    %r6
+	jr   %r6
 	st.s   %f5, %r6, $-1
 	ld    %r1, %r6, $-1
 	nop

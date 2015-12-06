@@ -13,11 +13,6 @@ let fpr x =
   assert (prefix = "%f");
   int_of_string (String.sub x 2 (String.length x - 2))
 
-let imm x =
-  let prefix = String.sub x 0 1 in
-  assert (prefix = "$");
-  int_of_string (String.sub x 1 (String.length x - 1))
-
 (* X-Format *)
 let x_format ?(d=0) ?(s=0) ?(t=0) funct =
   assert (0 <= d && d <= 0b11111);
@@ -137,7 +132,7 @@ let divi (opt:processing) d s imm =
   i_format ~d:(fpr d) ~s:(fpr s) ~imm:imm (0b10000 + optbit + bitim)
 
 let jspec = function None -> 0 | Link -> 1
-let j (jopt:jumpspec) d = i_format ~d:(gpr d) (((jspec jopt) lsl 2) + 2)
+let j (jopt:jumpspec) imm = i_format ~imm:imm (((jspec jopt) lsl 2) + 2)
 let jr (jopt:jumpspec) d = i_format ~d:(gpr d) (((jspec jopt) lsl 2) + 3)
 
 let ld rf d s imm =
@@ -162,6 +157,16 @@ let sqrt d s = i_format ~d:(fpr d) ~s:(fpr s) 0b11111
 
 (* Assembly -> Bytecode *)
 let bytecode line addrmap =
+  (* convert immediate (/$-?\d+/ or label) *)
+  let imm x =
+    let prefix = String.sub x 0 1 in
+    if prefix = "$" then
+      (* fetch integer immediate *)
+      int_of_string (String.sub x 1 (String.length x - 1))
+    else
+      (* fetch label address *)
+      AddrMap.find x addrmap in
+
   let line = String.trim line in
   match Str.split (Str.regexp "[ \t,]+") line with
   | [] -> assert false
@@ -176,12 +181,12 @@ let bytecode line addrmap =
     | "itof" -> itof args.(0) args.(1)
     | "ftoi" -> ftoi args.(0) args.(1)
     (* B-Format *)
-    | "beq"   -> beq GPR args.(0) args.(1) (AddrMap.find args.(2) addrmap)
-    | "beq.s" -> beq FPR args.(0) args.(1) (AddrMap.find args.(2) addrmap)
-    | "blt"   -> blt GPR args.(0) args.(1) (AddrMap.find args.(2) addrmap)
-    | "blt.s" -> blt FPR args.(0) args.(1) (AddrMap.find args.(2) addrmap)
-    | "ble"   -> ble GPR args.(0) args.(1) (AddrMap.find args.(2) addrmap)
-    | "ble.s" -> ble FPR args.(0) args.(1) (AddrMap.find args.(2) addrmap)
+    | "beq"   -> beq GPR args.(0) args.(1) (imm args.(2))
+    | "beq.s" -> beq FPR args.(0) args.(1) (imm args.(2))
+    | "blt"   -> blt GPR args.(0) args.(1) (imm args.(2))
+    | "blt.s" -> blt FPR args.(0) args.(1) (imm args.(2))
+    | "ble"   -> ble GPR args.(0) args.(1) (imm args.(2))
+    | "ble.s" -> ble FPR args.(0) args.(1) (imm args.(2))
     (* R-Format *)
     | "add"    -> add GPR None args.(0) args.(1) args.(2)
     | "add.s"  -> add FPR None args.(0) args.(1) args.(2)
@@ -220,8 +225,8 @@ let bytecode line addrmap =
     | "divi.s"  -> divi None args.(0) args.(1) (imm args.(2))
     | "divin.s" -> divi Neg args.(0) args.(1)  (imm args.(2))
     | "divia.s" -> divi Abs args.(0) args.(1)  (imm args.(2))
-    | "j"       -> j None args.(0)
-    | "jal"     -> j Link args.(0)
+    | "j"       -> j None (imm args.(0))
+    | "jal"     -> j Link (imm args.(0))
     | "jr"      -> jr None args.(0)
     | "jral"    -> jr Link args.(0)
     | "ld"      -> ld GPR args.(0) args.(1) (imm args.(2))
