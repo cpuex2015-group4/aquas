@@ -1,11 +1,3 @@
-(* constants *)
-let text_offset = 0x00400
-let data_offset = 0x10000
-let p_extern = ".extern"
-let p_text   = ".text"
-let p_data   = ".data"
-let p_word   = ".word"
-
 (* add prefix to label *)
 let label l = "_leml_" ^ l
 
@@ -31,8 +23,8 @@ let split_input lines =
         (let l = String.trim l in
          match l with
          | "" -> split_input' sec textls datals ls
-         | l when l = p_text -> split_input' Text textls datals ls
-         | l when l = p_data -> split_input' Data textls datals ls
+         | l when l = Config.p_text -> split_input' Text textls datals ls
+         | l when l = Config.p_data -> split_input' Data textls datals ls
          | _ when sec = Text -> split_input' sec (l::textls) datals ls
          | _ when sec = Data -> split_input' sec textls (l::datals) ls
          | _ -> assert false) in
@@ -69,8 +61,8 @@ let build_addr_map text_lines data_lines =
           build map offset (n + 1) (l :: striped_lines) lines in
 
   (* build map for .text/.data respectively *)
-  let text_map, text_lines = build AddrMap.empty text_offset 0 [] text_lines in
-  let data_map, data_lines = build AddrMap.empty data_offset 0 [] data_lines in
+  let text_map, text_lines = build AddrMap.empty Config.text_offset 0 [] text_lines in
+  let data_map, data_lines = build AddrMap.empty Config.data_offset 0 [] data_lines in
 
   (* merge .text/.data address map *)
   let merge_spec = fun l text_addr data_addr ->
@@ -95,10 +87,10 @@ let rec emit_data oc = function
   | [] -> ()
   | l::lines ->
       (let l = String.trim l in
-       let len = String.length p_word in 
+       let len = String.length Config.p_word in 
 
        (* .data lines should start with `.word` *)
-       assert ((String.sub l 0 len) = p_word);
+       assert ((String.sub l 0 len) = Config.p_word);
 
        (* fetch word data *)
        let s = String.trim (String.sub l len (String.length l - len - 1)) in
@@ -112,7 +104,7 @@ let rec emit_data oc = function
 let emit oc lines =
   (* Ignore .extern pseudo-instruction *)
   let lines =
-    List.filter (fun l -> not (ExtString.String.exists l p_extern)) lines in
+    List.filter (fun l -> not (ExtString.String.exists l Config.p_extern)) lines in
 
   (* Ignore comments *)
   let lines = eliminate_comments lines in

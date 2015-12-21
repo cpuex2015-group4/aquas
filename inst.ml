@@ -2,6 +2,8 @@ type regtype    = GPR | FPR
 type processing = None | Neg | Abs
 type jumpspec   = None | Link
 
+let pc = ref (Config.text_offset)
+
 (* operand -> number *)
 let gpr x =
   let prefix = String.sub x 0 2 in
@@ -167,6 +169,12 @@ let bytecode line addrmap =
       (* fetch label address *)
       AddrMap.find x addrmap in
 
+  (* convert address to relative address *)
+  let rel x =
+    let abs_addr = AddrMap.find x addrmap in
+    let rel_addr = abs_addr - !pc in
+    pc := !pc + 1; rel_addr in
+
   let line = String.trim line in
   match Str.split (Str.regexp "[ \t,]+") line with
   | [] -> assert false
@@ -181,12 +189,12 @@ let bytecode line addrmap =
     | "itof" -> itof args.(0) args.(1)
     | "ftoi" -> ftoi args.(0) args.(1)
     (* B-Format *)
-    | "beq"   -> beq GPR args.(0) args.(1) (imm args.(2))
-    | "beq.s" -> beq FPR args.(0) args.(1) (imm args.(2))
-    | "blt"   -> blt GPR args.(0) args.(1) (imm args.(2))
-    | "blt.s" -> blt FPR args.(0) args.(1) (imm args.(2))
-    | "ble"   -> ble GPR args.(0) args.(1) (imm args.(2))
-    | "ble.s" -> ble FPR args.(0) args.(1) (imm args.(2))
+    | "beq"   -> beq GPR args.(0) args.(1) (rel args.(2))
+    | "beq.s" -> beq FPR args.(0) args.(1) (rel args.(2))
+    | "blt"   -> blt GPR args.(0) args.(1) (rel args.(2))
+    | "blt.s" -> blt FPR args.(0) args.(1) (rel args.(2))
+    | "ble"   -> ble GPR args.(0) args.(1) (rel args.(2))
+    | "ble.s" -> ble FPR args.(0) args.(1) (rel args.(2))
     (* R-Format *)
     | "add"    -> add GPR None args.(0) args.(1) args.(2)
     | "add.s"  -> add FPR None args.(0) args.(1) args.(2)

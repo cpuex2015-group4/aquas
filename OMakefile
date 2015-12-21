@@ -23,6 +23,7 @@ FILES[] =
 	inst
 	utils
 	addrMap
+	config
 
 OCAML_OTHER_LIBS += str
 
