@@ -2,7 +2,7 @@ type regtype    = GPR | FPR
 type processing = None | Neg | Abs
 type jumpspec   = None | Link
 
-let pc = ref (Config.text_offset)
+let pc = ref (Config.text_offset - 1)
 
 (* operand -> number *)
 let gpr x =
@@ -159,6 +159,7 @@ let sqrt d s = i_format ~d:(fpr d) ~s:(fpr s) 0b11111
 
 (* Assembly -> Bytecode *)
 let bytecode line addrmap =
+  pc := !pc + 1;
   (* convert immediate (/$-?\d+/ or label) *)
   let imm x =
     let prefix = String.sub x 0 1 in
@@ -173,7 +174,7 @@ let bytecode line addrmap =
   let rel x =
     let abs_addr = AddrMap.find x addrmap in
     let rel_addr = abs_addr - !pc in
-    pc := !pc + 1; rel_addr in
+    rel_addr in
 
   let line = String.trim line in
   match Str.split (Str.regexp "[ \t,]+") line with
