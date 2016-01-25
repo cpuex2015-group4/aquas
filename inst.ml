@@ -157,6 +157,13 @@ let srl d s imm =
 let inv d s = i_format ~d:(fpr d) ~s:(fpr s) 0b11110
 let sqrt d s = i_format ~d:(fpr d) ~s:(fpr s) 0b11111
 
+(* pseudo instruction *)
+let li d imm = addi GPR None d "%r0" imm
+let mr rf d s =
+  match rf with
+  | GPR -> add rf None d s "%r0" 
+  | FPR -> add rf None d s "%f0" 
+
 (* Assembly -> Bytecode *)
 let bytecode line addrmap =
   pc := !pc + 1;
@@ -234,5 +241,9 @@ let bytecode line addrmap =
     | "srl"     -> sll args.(0) args.(1) (imm args.(2))
     | "inv.s"   -> inv args.(0) args.(1)
     | "sqrt.s"  -> inv args.(0) args.(1)
+    (* pseudo instruction *)
+    | "li"      -> li args.(0) (imm args.(1))
+    | "mr"      -> mr GPR args.(0) args.(1)
+    | "mr.s"    -> mr FPR args.(0) args.(1)
     | _ -> failwith (Printf.sprintf "invalid mnemonic `%s`" op)
   end
