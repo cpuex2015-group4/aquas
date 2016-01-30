@@ -39,7 +39,7 @@ let b_format op d s imm =
   assert (0 <= op && op <= 0b11111);
   assert (0 <= d && d <= 0b11111);
   assert (0 <= s && s <= 0b11111);
-  assert (0 <= imm && imm <= 0b1111111111111111);
+  assert (-0b1000000000000000 <= imm && imm <= 0b0111111111111111);
   Utils.bytes_of_int (
     (op lsl 26) +
     (d lsl 21) +
