@@ -93,7 +93,7 @@ let rec emit_data oc = function
        assert ((String.sub l 0 len) = Config.p_word);
 
        (* fetch word data *)
-       let s = String.trim (String.sub l len (String.length l - len - 1)) in
+       let s = String.trim (String.sub l len (String.length l - len)) in
        let i = int_of_string (String.trim s) in
 
        (* emit data *)
