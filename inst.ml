@@ -135,7 +135,7 @@ let divi (opt:processing) d s imm =
 
 let jspec = function None -> 0 | Link -> 1
 let j (jopt:jumpspec) imm = i_format ~imm:imm (((jspec jopt) lsl 2) + 2)
-let jr (jopt:jumpspec) d = i_format ~d:(gpr d) (((jspec jopt) lsl 2) + 3)
+let jr (jopt:jumpspec) d = r_format ~d:(gpr d) (((jspec jopt) lsl 2) + 2)
 
 let ld rf d s imm =
   match rf with
@@ -222,6 +222,8 @@ let bytecode line addrmap =
     | "div.s"  -> div None args.(0) args.(1) args.(2)
     | "divn.s" -> div Neg args.(0) args.(1) args.(2)
     | "diva.s" -> div Abs args.(0) args.(1) args.(2)
+    | "jr"     -> jr None args.(0)
+    | "jral"   -> jr Link args.(0)
     (* I-Format *)
     | "addi"    -> addi GPR None args.(0) args.(1) (imm args.(2))
     | "addin"   -> addi GPR Neg args.(0) args.(1)  (imm args.(2))
@@ -231,8 +233,6 @@ let bytecode line addrmap =
     | "subia"   -> subi GPR Abs args.(0) args.(1)  (imm args.(2))
     | "j"       -> j None (imm args.(0))
     | "jal"     -> j Link (imm args.(0))
-    | "jr"      -> jr None args.(0)
-    | "jral"    -> jr Link args.(0)
     | "ld"      -> ld GPR args.(0) args.(1) (imm args.(2))
     | "ld.s"    -> ld FPR args.(0) args.(1) (imm args.(2))
     | "st"      -> st GPR args.(0) args.(1) (imm args.(2))
