@@ -238,7 +238,7 @@ let bytecode line addrmap =
     | "st"      -> st GPR args.(0) args.(1) (imm args.(2))
     | "st.s"    -> st FPR args.(0) args.(1) (imm args.(2))
     | "sll"     -> sll args.(0) args.(1) (imm args.(2))
-    | "srl"     -> sll args.(0) args.(1) (imm args.(2))
+    | "srl"     -> srl args.(0) args.(1) (imm args.(2))
     | "inv.s"   -> inv args.(0) args.(1)
     | "sqrt.s"  -> inv args.(0) args.(1)
     (* pseudo instruction *)
