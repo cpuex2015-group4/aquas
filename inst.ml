@@ -135,7 +135,7 @@ let divi (opt:processing) d s imm =
 
 let jspec = function None -> 0 | Link -> 1
 let j (jopt:jumpspec) imm = i_format ~imm:imm (((jspec jopt) lsl 2) + 2)
-let jr (jopt:jumpspec) d = r_format ~d:(gpr d) (((jspec jopt) lsl 2) + 2)
+let jr (jopt:jumpspec) d = r_format 0 ~s:0 ~t:(gpr d) (((jspec jopt) lsl 2) + 2)
 
 let ld rf d s imm =
   match rf with
