@@ -44,7 +44,7 @@ let b_format op d s imm =
     (op lsl 26) +
     (d lsl 21) +
     (s lsl 16) +
-    imm)
+    (imm land 0xffff))
 
 let beq rf d s imm =
   match rf with
@@ -107,7 +107,7 @@ let i_format ?(d=0) ?(s=0) ?(imm=0) op =
     (op lsl 26) +
     (d lsl 21) +
     (s lsl 16) +
-    imm)
+    (imm land 0xffff))
 
 let addi rf (opt:processing) d s imm =
   let bitim = 0 in
